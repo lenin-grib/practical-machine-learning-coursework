@@ -47,7 +47,7 @@ dim(training)
 
 The data has a lot of variables, so before fitting a model it makes sense to reduce their amount and leave only relevant ones. 
 
-After performing some exploratory analysis (outputs are moved to Appendix 1 due to significant size) we can drop columns a) with mostly NA value; b) with negligible variance (most probably not good predictors) c) informational fields, such as observation index, name, etc.
+After performing some exploratory analysis (outputs are omitted due to significant size) we can drop columns a) with mostly NA value; b) with negligible variance (most probably not good predictors); c) informational fields, such as observation index, name, etc.
 
 ### Removing the columns with little known data
 
@@ -175,8 +175,8 @@ kable(comp) %>%
 
 ## Conclusion
 
-According to our test, random forest method did the best in terms of predicting values for the validation dataset with predicted out of sample error of `r 1-as.numeric(as.character(comp[1,2]))`. Boosting came a close second with the OOS error of `r 1-as.numeric(as.character(comp[2,2]))`, but MUCH better performance. The other option would be to limit the predictor to the most important ones (see Appendix 2): even leaving only 5 most significant predictors still gives an estimated OOS error around 0.03 (see Appendix 3).
-Since the end goal of this excercise is to predict values in test dataset as accurate as possible, let's choose the model produced by the forest method with all the variables as predictors as our final, but with the note that eliminating predictors is probably preferrable to use on large sets of data.
+According to our test, random forest method did the best in terms of predicting values for the validation dataset with predicted out of sample error of `r 1-as.numeric(as.character(comp[1,2]))`. Boosting came a close second with the OOS error of `r 1-as.numeric(as.character(comp[2,2]))`, but MUCH better performance. The other option would be to limit the predictor to the most important ones (see Appendix 1): even leaving only 5 most significant predictors still gives an estimated OOS error around 0.03 (see Appendix 2).
+Since the end goal of this excercise is to predict values in test dataset (rather small) as accurate as possible, let's choose the model produced by the random forest method with all the variables as predictors as our final, but with the note that eliminating predictors is probably preferrable to use on large sets of data.
 
 ## Prediction
 
@@ -188,19 +188,12 @@ predict(mrf, testing)
 
 # Appendix
 
-## Apendix 1. Training dataset structure
-
-```{r exploremore}
-names(trdat[inTrain,])
-head(trdat[inTrain,])
-```
-
-## Appendix 2. Variable importance in the final model
+## Appendix 1. Variable importance in the final model
 ```{r varimprf}
 plot(varImp(mrf))
 ```
 
-## Appendix 3. Optimization
+## Appendix 2. Optimization
 ```{r optrf}
 mrfstAdj <- system.time (mrfAdj <- train(classe ~ roll_belt + 
                 pitch_forearm + yaw_belt + magnet_dumbbell_z +
@@ -236,7 +229,7 @@ kable(comp) %>%
 
 ```
 
-## Appendix 4. Environment data
+## Appendix 3. Environment data
 
 ```{r}
 sessionInfo()

@@ -101,7 +101,7 @@ library(kableExtra)
 library(dplyr)
 
 comp <- data.frame(matrix(ncol = 3, nrow = 0))
-comp <- rbind(comp, comp1, comp2, comp3, comp4)
+comp <- rbind(comp, comp1, comp2, comp3, comp4, comp5, comp6)
 x <- c("method", "accuracy", "running time")
 colnames(comp) <- x
 
@@ -135,11 +135,35 @@ confusionMatrix(pstackedrf, validation$classe)$overall[1]
 
 
 
+mrfstAdj <- system.time (mrfAdj <- train(classe ~ roll_belt + 
+                pitch_forearm + yaw_belt + magnet_dumbbell_z +
+                pitch_belt + magnet_dumbbell_y +
+                roll_forearm + accel_dumbbell_y, 
+        data = training, method = "rf", trControl= tc))
+
+prfAdj <- predict(mrfAdj, validation)
+
+comp5 <- c("random forest8", 
+        confusionMatrix(prfAdj, validation$classe)$overall[1], 
+        mrfstAdj[2])
+names(comp5) <- x
+comp <- rbind(comp, comp5)
+comp
 
 
 
+mrfstAdj2 <- system.time (mrfAdj2 <- train(classe ~ roll_belt + 
+                pitch_forearm + yaw_belt + magnet_dumbbell_z +
+                pitch_belt , 
+        data = training, method = "rf", trControl= tc))
 
+prfAdj2 <- predict(mrfAdj2, validation)
 
+comp6 <- c("random forest5", 
+        confusionMatrix(prfAdj2, validation$classe)$overall[1],
+        mrfstAdj2[2])
+comp <- rbind(comp, comp6)
+comp
 
 
 
