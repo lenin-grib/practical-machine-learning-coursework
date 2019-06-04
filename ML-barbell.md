@@ -226,7 +226,20 @@ kable(comp) %>%
 
 ## Conclusion
 
-According to our test, random forest method did the best in terms of predicting values for the validation dataset with predicted out of sample error of 0.007137. Boosting came a close second with the OOS error of 0.0340538, but MUCH better performance. Since the end goal of this excercise is to predict values in test dataset as accurate as possible, let's choose the model produced by random forest method as our final, but with the note that boosting is probably preferrable to use on large sets of data.
+According to our test, random forest method did the best in terms of predicting values for the validation dataset with predicted out of sample error of 0.007137. Boosting came a close second with the OOS error of 0.0340538, but MUCH better performance. The other option would be to limit the predictor to the most important ones (see Appendix 2): even leaving only 5 most significant predictors still gives an estimated OOS error around 0.03 (see Appendix 3).
+Since the end goal of this excercise is to predict values in test dataset as accurate as possible, let's choose the model produced by the forest method with all the variables as predictors as our final, but with the note that eliminating predictors is probably preferrable to use on large sets of data.
+
+## Prediction
+
+
+```r
+predict(mrf, testing)
+```
+
+```
+##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E
+```
 
 ******
 
@@ -609,7 +622,93 @@ head(trdat[inTrain,])
 ## 7              -18              659              470      A
 ```
 
-## Appendix 2. Environment data
+## Appendix 2. Variable importance in the final model
+
+```r
+plot(varImp(mrf))
+```
+
+![](ML-barbell_files/figure-html/varimprf-1.png)<!-- -->
+
+## Appendix 3. Optimization
+
+```r
+mrfstAdj <- system.time (mrfAdj <- train(classe ~ roll_belt + 
+                pitch_forearm + yaw_belt + magnet_dumbbell_z +
+                pitch_belt + magnet_dumbbell_y +
+                roll_forearm + accel_dumbbell_y, 
+        data = training, method = "rf", trControl= tc))
+
+prfAdj <- predict(mrfAdj, validation)
+
+comp5 <- c("random forest8", 
+        confusionMatrix(prfAdj, validation$classe)$overall[1], 
+        mrfstAdj[2])
+
+mrfstAdj2 <- system.time (mrfAdj2 <- train(classe ~ roll_belt + 
+                pitch_forearm + yaw_belt + magnet_dumbbell_z +
+                pitch_belt , 
+        data = training, method = "rf", trControl= tc))
+
+prfAdj2 <- predict(mrfAdj2, validation)
+
+comp6 <- c("random forest5", 
+        confusionMatrix(prfAdj2, validation$classe)$overall[1],
+        mrfstAdj2[2])
+
+comp <- data.frame(matrix(ncol = 3, nrow = 0))
+comp <- rbind(comp, comp1, comp2, comp3, comp4, comp5, comp6)
+x <- c("method", "accuracy", "running time")
+colnames(comp) <- x
+
+kable(comp) %>%
+        kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = F)
+```
+
+<table class="table table-striped table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> method </th>
+   <th style="text-align:left;"> accuracy </th>
+   <th style="text-align:left;"> running time </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> random forest </td>
+   <td style="text-align:left;"> 0.992862969004894 </td>
+   <td style="text-align:left;"> 1.98 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> boosting </td>
+   <td style="text-align:left;"> 0.96594616639478 </td>
+   <td style="text-align:left;"> 0.43 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> decision tree </td>
+   <td style="text-align:left;"> 0.498776508972268 </td>
+   <td style="text-align:left;"> 0.22 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> svm </td>
+   <td style="text-align:left;"> 0.954323001631321 </td>
+   <td style="text-align:left;"> 0.19 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> random forest8 </td>
+   <td style="text-align:left;"> 0.984910277324633 </td>
+   <td style="text-align:left;"> 2.49 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> random forest5 </td>
+   <td style="text-align:left;"> 0.97084013050571 </td>
+   <td style="text-align:left;"> 2.58 </td>
+  </tr>
+</tbody>
+</table>
+
+## Appendix 4. Environment data
 
 
 ```r

@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/502104/7f5333cbffd94b658d0da04f1952f4f6
+bundleId: https://api.rpubs.com/api/v1/document/502104/7f5333cbffd94b658d0da04f1952f4f6
+url: http://rpubs.com/leningrib/502104
+when: 1559682267.99052
