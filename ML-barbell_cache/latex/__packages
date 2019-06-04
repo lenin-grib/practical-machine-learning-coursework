@@ -1,0 +1,11 @@
+base
+lattice
+ggplot2
+caret
+rpart
+rpart.plot
+rattle
+e1071
+foreach
+iterators
+doParallel

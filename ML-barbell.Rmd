@@ -2,9 +2,9 @@
 title: "Practical Machine Learning: detecting correct barbell performance based on health trackers data"
 author: "Daria Stepanyan"
 output:
+  pdf_document: default
   html_document:
     keep_md: yes
-  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -183,9 +183,9 @@ According to our test, random forest method did the best in terms of predicting 
 
 ## Apendix 1. Training dataset structure
 
-```{r exploremore, eval=FALSE, include=FALSE}
-names(training)
-head(training)
+```{r exploremore}
+names(trdat[inTrain,])
+head(trdat[inTrain,])
 ```
 
 ## Appendix 2. Environment data
