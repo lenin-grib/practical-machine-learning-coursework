@@ -9,3 +9,6 @@ e1071
 foreach
 iterators
 doParallel
+knitr
+kableExtra
+dplyr

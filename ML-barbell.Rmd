@@ -2,9 +2,9 @@
 title: "Practical Machine Learning: detecting correct barbell performance based on health trackers data"
 author: "Daria Stepanyan"
 output:
-  pdf_document: default
   html_document:
     keep_md: yes
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
