@@ -1,4 +1,4 @@
-library(caret)
+
 
 trdat = read.csv("pml-training.csv")
 testdata = read.csv("pml-testing.csv")
@@ -41,37 +41,95 @@ validation <- validation [trvars]
 testing <- testdata[tstvars]
 
 ## modelling
+library(caret)
 library(rpart) 
 library(rpart.plot) 
 library(rattle)
 library(e1071)
 
+##prep  https://rpubs.com/lgreski/improvingCaretPerformance
 set.seed(29)
+library(parallel)
+library(doParallel)
+cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
 
-mrf <- train(classe ~., data = training, method = "rf")
-mgbm <- train(classe ~., data = training, method = "gbm", 
-        verbose = FALSE)
-mlda <- train(classe ~., data = training, method = "lda", 
-        verbose = FALSE)
-msvm <- svm(classe ~ ., data = training)
+tc <- trainControl(method = "cv", number = 5, 
+        allowParallel=TRUE)
+
+### modelling
+mrfst <- system.time (mrf <- train(classe ~., 
+        data = training, method = "rf", trControl= tc))
+mgbmst <- system.time (mgbm <- train(classe ~., 
+        data = training, method = "gbm", 
+        verbose = FALSE, trControl= tc))
+mrpst <- system.time (mrp <- train(classe ~., 
+        data = training, method = "rpart", 
+        trControl= tc))
+msvmst <- system.time (msvm <- svm(classe ~ ., 
+        data = training, trControl= tc))
+
+### shut cluster down
+stopCluster(cluster)
+registerDoSEQ()
+
+### cross-validate
 
 prf <- predict(mrf, validation)
 pgbm <- predict(mgbm, validation)
-plda <- predict(mlda, validation)
+prp <- predict(mrp, validation)
 psvm <- predict(msvm, validation)
 
-confusionMatrix(prf, validation$classe)$overall[1]
-confusionMatrix(pgbm, validation$classe)$overall[1]
-confusionMatrix(plda, validation$classe)$overall[1]
-confusionMatrix(psvm, validation$classe)$overall[1]
+### comparison
 
-pdf <- data.frame(prf, pgbm, plda, validation$classe)
+comp1 <- c("random forest", 
+        confusionMatrix(prf, validation$classe)$overall[1],
+        mrfst[2])
+comp2 <- c("boosting", 
+        confusionMatrix(pgbm, validation$classe)$overall[1],
+        mgbmst[2])
+comp3 <- c("decision tree", 
+        confusionMatrix(prp, validation$classe)$overall[1],
+        mrpst[2])
+comp4 <- c("svm", 
+        confusionMatrix(psvm, validation$classe)$overall[1],
+        msvmst[2])
 
-mstacked <- train(validation$classe ~ ., data = pdf, method = "rf")
+### formatting
+library(knitr)
+library(kableExtra)
+library(dplyr)
 
-pstacked <- predict(mstacked, pdf)
+comp <- data.frame(matrix(ncol = 3, nrow = 0))
+comp <- rbind(comp, comp1, comp2, comp3, comp4)
+x <- c("method", "accuracy", "running time")
+colnames(comp) <- x
 
-confusionMatrix(pstacked, validation$classe)$overall[1]
+kable(comp) %>%
+        kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = F)
+
+##confusionMatrix(prf, validation$classe)$overall[1]
+##confusionMatrix(pgbm, validation$classe)$overall[1]
+##confusionMatrix(pcl, validation$classe)$overall[1]
+##confusionMatrix(psvm, validation$classe)$overall[1]
+
+## finals
+
+finalmodel <- mrf
+1-as.numeric(as.character(comp[1,2]))
+
+
+## try stacking
+stacked <- data.frame(prf, pgbm, psvm, training$classe)
+
+mstackedlm <- train(validation.classe ~ ., data = stacked, method = "glm")
+mstackedrf <- train(validation.classe ~ ., data = stacked, method = "rf")
+pstackedlm <- predict(mstackedlm, stacked)
+pstackedrf <- predict(mstackedrf, stacked)
+
+confusionMatrix(pstackedlm, validation$classe)$overall[1]
+confusionMatrix(pstackedrf, validation$classe)$overall[1]
 
 
 

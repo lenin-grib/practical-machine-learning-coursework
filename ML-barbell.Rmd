@@ -1,0 +1,197 @@
+---
+title: "Practical Machine Learning: detecting correct barbell performance based on health trackers data"
+author: "Daria Stepanyan"
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning = FALSE, cache = TRUE)
+```
+
+## Executive summary
+
+In this project, the goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+Several machine learning algorythms were used to choose a final model; cross-validation analysis showed that model produced by the random forest method was the most accurate.
+
+## Loading data
+
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+```{r data}
+trdat = read.csv("pml-training.csv")
+testdata = read.csv("pml-testing.csv")
+```
+
+First of all we'll separate a portion of data which will be used for cross validation
+
+```{r partition}
+library(caret)
+set.seed(29)
+inTrain = createDataPartition(trdat$classe, 
+        p = 3/4)[[1]]
+training = trdat[inTrain,]
+validation = trdat[-inTrain,]
+```
+
+## Exploratory analysis and cleaning
+
+
+```{r explore}
+dim(training)
+```
+
+The data has a lot of variables, so before fitting a model it makes sense to reduce their amount and leave only relevant ones. 
+
+After performing some exploratory analysis (outputs are moved to Appendix 1 due to significant size) we can drop columns a) with mostly NA value; b) with negligible variance (most probably not good predictors) c) informational fields, such as observation index, name, etc.
+
+### Removing the columns with little known data
+
+By changing the threshold below we can see that certain amount of columns have more than 95% of the values missing, whereas rest of the data is quite full. Setting the threshold to 90% just for very conservative removal.
+
+```{r remna}
+thres = 0.9
+NAcols <- apply(training, 2,  
+        FUN = function(x){sum(is.na(x)) > (nrow(training)*thres)})
+NNAcols <- names(subset(NAcols, NAcols == F))
+training <- training[NNAcols]
+```
+
+`r sum(NAcols)` columns gone.
+
+### Removing predictors with low variablility
+
+```{r remnzv}
+NZVcols <- nearZeroVar(training)
+training <- training[-NZVcols]
+```
+
+### Removing informational fields
+
+```{r reminfo}
+training <- training[-c(1:6)]
+```
+
+### Tidying up
+```{r dimf}
+dim(training)
+```
+
+Let's apply performed changes to our validation and test datasets for future comparison
+```{r apply}
+trvars <- names(training)
+tstvars <- names(training[,-53])
+validation <- validation [trvars]
+testing <- testdata[tstvars]
+```
+
+## Finding a best-fit model
+
+For the comparison 4 algorythms were chosen as quite popular for classification: decision tree, random forest, boosting and svm.
+
+### Preparation for model fitting
+```{r libs}
+library(rpart) 
+library(rpart.plot) 
+library(rattle)
+library(e1071)
+```
+
+Next chunk is setting the seed and preparing the machine for performing calculations more efficiently. (Thanks to the author of this article: https://rpubs.com/lgreski/improvingCaretPerformance code for modelling runs manageable amount of time)
+
+```{r prep}
+set.seed(29)
+library(parallel)
+library(doParallel)
+cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
+
+tc <- trainControl(method = "cv", number = 5, 
+        allowParallel=TRUE)
+```
+
+### Models
+
+Code below fits the model using different methods and gets the running time for each.
+
+```{r models}
+mrfst <- system.time (mrf <- train(classe ~., 
+        data = training, method = "rf", trControl= tc))
+mgbmst <- system.time (mgbm <- train(classe ~., 
+        data = training, method = "gbm", 
+        verbose = FALSE, trControl= tc))
+mrpst <- system.time (mrp <- train(classe ~., 
+        data = training, method = "rpart", 
+        trControl= tc))
+msvmst <- system.time (msvm <- svm(classe ~ ., 
+        data = training, trControl= tc))
+```
+
+Shutting the cluster down
+```{r shcluster}
+stopCluster(cluster)
+registerDoSEQ()
+```
+
+### Cross-validation
+For the evaluation of the fitted models' efficiency we use our wisely prepared validation set and combine it into a table.
+
+```{r crval}
+prf <- predict(mrf, validation)
+pgbm <- predict(mgbm, validation)
+prp <- predict(mrp, validation)
+psvm <- predict(msvm, validation)
+
+comp1 <- c("random forest", 
+        confusionMatrix(prf, validation$classe)$overall[1],
+        mrfst[2])
+comp2 <- c("boosting", 
+        confusionMatrix(pgbm, validation$classe)$overall[1],
+        mgbmst[2])
+comp3 <- c("decision tree", 
+        confusionMatrix(prp, validation$classe)$overall[1],
+        mrpst[2])
+comp4 <- c("svm", 
+        confusionMatrix(psvm, validation$classe)$overall[1],
+        msvmst[2])
+
+library(knitr)
+library(kableExtra)
+library(dplyr)
+
+comp <- data.frame(matrix(ncol = 3, nrow = 0))
+comp <- rbind(comp, comp1, comp2, comp3, comp4)
+x <- c("method", "accuracy", "running time")
+colnames(comp) <- x
+
+kable(comp) %>%
+        kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = F)
+```
+
+## Conclusion
+
+According to our test, random forest method did the best in terms of predicting values for the validation dataset with predicted out of sample error of `r 1-as.numeric(as.character(comp[1,2]))`. Boosting came a close second with the OOS error of `r 1-as.numeric(as.character(comp[2,2]))`, but MUCH better performance. Since the end goal of this excercise is to predict values in test dataset as accurate as possible, let's choose the model produced by random forest method as our final, but with the note that boosting is probably preferrable to use on large sets of data.
+
+******
+
+# Appendix
+
+## Apendix 1. Training dataset structure
+
+```{r exploremore, eval=FALSE, include=FALSE}
+names(training)
+head(training)
+```
+
+## Appendix 2. Environment data
+
+```{r}
+sessionInfo()
+```
+
+
