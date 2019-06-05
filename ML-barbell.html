@@ -141,8 +141,7 @@ testdata = read.csv(&quot;pml-testing.csv&quot;)</code></pre>
 <p>First of all we’ll separate a portion of data which will be used for cross validation</p>
 <pre class="r"><code>library(caret)
 set.seed(29)
-inTrain = createDataPartition(trdat$classe, 
-        p = 3/4)[[1]]
+inTrain = createDataPartition(trdat$classe, p = 3/4)[[1]]
 training = trdat[inTrain,]
 validation = trdat[-inTrain,]</code></pre>
 </div>
@@ -156,8 +155,7 @@ validation = trdat[-inTrain,]</code></pre>
 <h3>Removing the columns with little known data</h3>
 <p>By changing the threshold below we can see that certain amount of columns have more than 95% of the values missing, whereas rest of the data is quite full. Setting the threshold to 90% just for very conservative removal.</p>
 <pre class="r"><code>thres = 0.9
-NAcols &lt;- apply(training, 2,  
-        FUN = function(x){sum(is.na(x)) &gt; (nrow(training)*thres)})
+NAcols &lt;- apply(training, 2,  FUN = function(x){sum(is.na(x)) &gt; (nrow(training)*thres)})
 NNAcols &lt;- names(subset(NAcols, NAcols == F))
 training &lt;- training[NNAcols]</code></pre>
 <p>67 columns gone.</p>
@@ -198,22 +196,15 @@ library(doParallel)
 cluster &lt;- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
-tc &lt;- trainControl(method = &quot;cv&quot;, number = 5, 
-        allowParallel=TRUE)</code></pre>
+tc &lt;- trainControl(method = &quot;cv&quot;, number = 5, allowParallel=TRUE)</code></pre>
 </div>
 <div id="models" class="section level3">
 <h3>Models</h3>
 <p>Code below fits the model using different methods and gets the running time for each.</p>
-<pre class="r"><code>mrfst &lt;- system.time (mrf &lt;- train(classe ~., 
-        data = training, method = &quot;rf&quot;, trControl= tc))
-mgbmst &lt;- system.time (mgbm &lt;- train(classe ~., 
-        data = training, method = &quot;gbm&quot;, 
-        verbose = FALSE, trControl= tc))
-mrpst &lt;- system.time (mrp &lt;- train(classe ~., 
-        data = training, method = &quot;rpart&quot;, 
-        trControl= tc))
-msvmst &lt;- system.time (msvm &lt;- svm(classe ~ ., 
-        data = training, trControl= tc))</code></pre>
+<pre class="r"><code>mrfst &lt;- system.time (mrf &lt;- train(classe ~., data = training, method = &quot;rf&quot;, trControl= tc))
+mgbmst &lt;- system.time (mgbm &lt;- train(classe ~., data = training, method = &quot;gbm&quot;, verbose = FALSE, trControl= tc))
+mrpst &lt;- system.time (mrp &lt;- train(classe ~., data = training, method = &quot;rpart&quot;, trControl= tc))
+msvmst &lt;- system.time (msvm &lt;- svm(classe ~ ., data = training, trControl= tc))</code></pre>
 <p>Shutting the cluster down</p>
 <pre class="r"><code>stopCluster(cluster)
 registerDoSEQ()</code></pre>
@@ -226,18 +217,10 @@ pgbm &lt;- predict(mgbm, validation)
 prp &lt;- predict(mrp, validation)
 psvm &lt;- predict(msvm, validation)
 
-comp1 &lt;- c(&quot;random forest&quot;, 
-        confusionMatrix(prf, validation$classe)$overall[1],
-        mrfst[2])
-comp2 &lt;- c(&quot;boosting&quot;, 
-        confusionMatrix(pgbm, validation$classe)$overall[1],
-        mgbmst[2])
-comp3 &lt;- c(&quot;decision tree&quot;, 
-        confusionMatrix(prp, validation$classe)$overall[1],
-        mrpst[2])
-comp4 &lt;- c(&quot;svm&quot;, 
-        confusionMatrix(psvm, validation$classe)$overall[1],
-        msvmst[2])
+comp1 &lt;- c(&quot;random forest&quot;, confusionMatrix(prf, validation$classe)$overall[1], mrfst[2])
+comp2 &lt;- c(&quot;boosting&quot;, confusionMatrix(pgbm, validation$classe)$overall[1], mgbmst[2])
+comp3 &lt;- c(&quot;decision tree&quot;, confusionMatrix(prp, validation$classe)$overall[1], mrpst[2])
+comp4 &lt;- c(&quot;svm&quot;, confusionMatrix(psvm, validation$classe)$overall[1], msvmst[2])
 
 library(knitr)
 library(kableExtra)
@@ -274,7 +257,7 @@ random forest
 0.992862969004894
 </td>
 <td style="text-align:left;">
-1.98
+5.92
 </td>
 </tr>
 <tr>
@@ -285,7 +268,7 @@ boosting
 0.96594616639478
 </td>
 <td style="text-align:left;">
-0.43
+1.51
 </td>
 </tr>
 <tr>
@@ -296,7 +279,7 @@ decision tree
 0.498776508972268
 </td>
 <td style="text-align:left;">
-0.22
+0.0200000000000014
 </td>
 </tr>
 <tr>
@@ -307,7 +290,7 @@ svm
 0.954323001631321
 </td>
 <td style="text-align:left;">
-0.19
+0.109999999999999
 </td>
 </tr>
 </tbody>
@@ -334,28 +317,25 @@ svm
 </div>
 <div id="appendix-2.-optimization" class="section level2">
 <h2>Appendix 2. Optimization</h2>
-<pre class="r"><code>mrfstAdj &lt;- system.time (mrfAdj &lt;- train(classe ~ roll_belt + 
-                pitch_forearm + yaw_belt + magnet_dumbbell_z +
-                pitch_belt + magnet_dumbbell_y +
-                roll_forearm + accel_dumbbell_y, 
+<pre class="r"><code>set.seed(29)
+
+cluster &lt;- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
+
+mrfstAdj &lt;- system.time (mrfAdj &lt;- train(classe ~ roll_belt + pitch_forearm + yaw_belt + magnet_dumbbell_z 
+        + pitch_belt + magnet_dumbbell_y + roll_forearm + accel_dumbbell_y, 
         data = training, method = &quot;rf&quot;, trControl= tc))
 
 prfAdj &lt;- predict(mrfAdj, validation)
 
-comp5 &lt;- c(&quot;random forest8&quot;, 
-        confusionMatrix(prfAdj, validation$classe)$overall[1], 
-        mrfstAdj[2])
+comp5 &lt;- c(&quot;random forest8&quot;, confusionMatrix(prfAdj, validation$classe)$overall[1], mrfstAdj[2])
 
-mrfstAdj2 &lt;- system.time (mrfAdj2 &lt;- train(classe ~ roll_belt + 
-                pitch_forearm + yaw_belt + magnet_dumbbell_z +
-                pitch_belt , 
+mrfstAdj2 &lt;- system.time (mrfAdj2 &lt;- train(classe ~ roll_belt + pitch_forearm + yaw_belt + magnet_dumbbell_z + pitch_belt, 
         data = training, method = &quot;rf&quot;, trControl= tc))
 
 prfAdj2 &lt;- predict(mrfAdj2, validation)
 
-comp6 &lt;- c(&quot;random forest5&quot;, 
-        confusionMatrix(prfAdj2, validation$classe)$overall[1],
-        mrfstAdj2[2])
+comp6 &lt;- c(&quot;random forest5&quot;, confusionMatrix(prfAdj2, validation$classe)$overall[1],mrfstAdj2[2])
 
 comp &lt;- data.frame(matrix(ncol = 3, nrow = 0))
 comp &lt;- rbind(comp, comp1, comp2, comp3, comp4, comp5, comp6)
@@ -388,7 +368,7 @@ random forest
 0.992862969004894
 </td>
 <td style="text-align:left;">
-1.98
+5.92
 </td>
 </tr>
 <tr>
@@ -399,7 +379,7 @@ boosting
 0.96594616639478
 </td>
 <td style="text-align:left;">
-0.43
+1.51
 </td>
 </tr>
 <tr>
@@ -410,7 +390,7 @@ decision tree
 0.498776508972268
 </td>
 <td style="text-align:left;">
-0.22
+0.0200000000000014
 </td>
 </tr>
 <tr>
@@ -421,7 +401,7 @@ svm
 0.954323001631321
 </td>
 <td style="text-align:left;">
-0.19
+0.109999999999999
 </td>
 </tr>
 <tr>
@@ -429,10 +409,10 @@ svm
 random forest8
 </td>
 <td style="text-align:left;">
-0.984910277324633
+0.984298531810767
 </td>
 <td style="text-align:left;">
-2.49
+2.94
 </td>
 </tr>
 <tr>
@@ -440,14 +420,16 @@ random forest8
 random forest5
 </td>
 <td style="text-align:left;">
-0.97084013050571
+0.970432300163132
 </td>
 <td style="text-align:left;">
-2.58
+1.56
 </td>
 </tr>
 </tbody>
 </table>
+<pre class="r"><code>stopCluster(cluster)
+registerDoSEQ()</code></pre>
 </div>
 <div id="appendix-3.-environment-data" class="section level2">
 <h2>Appendix 3. Environment data</h2>

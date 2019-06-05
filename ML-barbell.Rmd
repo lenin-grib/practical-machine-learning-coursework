@@ -32,8 +32,7 @@ First of all we'll separate a portion of data which will be used for cross valid
 ```{r partition}
 library(caret)
 set.seed(29)
-inTrain = createDataPartition(trdat$classe, 
-        p = 3/4)[[1]]
+inTrain = createDataPartition(trdat$classe, p = 3/4)[[1]]
 training = trdat[inTrain,]
 validation = trdat[-inTrain,]
 ```
@@ -55,8 +54,7 @@ By changing the threshold below we can see that certain amount of columns have m
 
 ```{r remna}
 thres = 0.9
-NAcols <- apply(training, 2,  
-        FUN = function(x){sum(is.na(x)) > (nrow(training)*thres)})
+NAcols <- apply(training, 2,  FUN = function(x){sum(is.na(x)) > (nrow(training)*thres)})
 NNAcols <- names(subset(NAcols, NAcols == F))
 training <- training[NNAcols]
 ```
@@ -110,8 +108,7 @@ library(doParallel)
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
-tc <- trainControl(method = "cv", number = 5, 
-        allowParallel=TRUE)
+tc <- trainControl(method = "cv", number = 5, allowParallel=TRUE)
 ```
 
 ### Models
@@ -119,16 +116,10 @@ tc <- trainControl(method = "cv", number = 5,
 Code below fits the model using different methods and gets the running time for each.
 
 ```{r models}
-mrfst <- system.time (mrf <- train(classe ~., 
-        data = training, method = "rf", trControl= tc))
-mgbmst <- system.time (mgbm <- train(classe ~., 
-        data = training, method = "gbm", 
-        verbose = FALSE, trControl= tc))
-mrpst <- system.time (mrp <- train(classe ~., 
-        data = training, method = "rpart", 
-        trControl= tc))
-msvmst <- system.time (msvm <- svm(classe ~ ., 
-        data = training, trControl= tc))
+mrfst <- system.time (mrf <- train(classe ~., data = training, method = "rf", trControl= tc))
+mgbmst <- system.time (mgbm <- train(classe ~., data = training, method = "gbm", verbose = FALSE, trControl= tc))
+mrpst <- system.time (mrp <- train(classe ~., data = training, method = "rpart", trControl= tc))
+msvmst <- system.time (msvm <- svm(classe ~ ., data = training, trControl= tc))
 ```
 
 Shutting the cluster down
@@ -146,18 +137,10 @@ pgbm <- predict(mgbm, validation)
 prp <- predict(mrp, validation)
 psvm <- predict(msvm, validation)
 
-comp1 <- c("random forest", 
-        confusionMatrix(prf, validation$classe)$overall[1],
-        mrfst[2])
-comp2 <- c("boosting", 
-        confusionMatrix(pgbm, validation$classe)$overall[1],
-        mgbmst[2])
-comp3 <- c("decision tree", 
-        confusionMatrix(prp, validation$classe)$overall[1],
-        mrpst[2])
-comp4 <- c("svm", 
-        confusionMatrix(psvm, validation$classe)$overall[1],
-        msvmst[2])
+comp1 <- c("random forest", confusionMatrix(prf, validation$classe)$overall[1], mrfst[2])
+comp2 <- c("boosting", confusionMatrix(pgbm, validation$classe)$overall[1], mgbmst[2])
+comp3 <- c("decision tree", confusionMatrix(prp, validation$classe)$overall[1], mrpst[2])
+comp4 <- c("svm", confusionMatrix(psvm, validation$classe)$overall[1], msvmst[2])
 
 library(knitr)
 library(kableExtra)
@@ -195,28 +178,25 @@ plot(varImp(mrf))
 
 ## Appendix 2. Optimization
 ```{r optrf}
-mrfstAdj <- system.time (mrfAdj <- train(classe ~ roll_belt + 
-                pitch_forearm + yaw_belt + magnet_dumbbell_z +
-                pitch_belt + magnet_dumbbell_y +
-                roll_forearm + accel_dumbbell_y, 
+set.seed(29)
+
+cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
+
+mrfstAdj <- system.time (mrfAdj <- train(classe ~ roll_belt + pitch_forearm + yaw_belt + magnet_dumbbell_z 
+        + pitch_belt + magnet_dumbbell_y + roll_forearm + accel_dumbbell_y, 
         data = training, method = "rf", trControl= tc))
 
 prfAdj <- predict(mrfAdj, validation)
 
-comp5 <- c("random forest8", 
-        confusionMatrix(prfAdj, validation$classe)$overall[1], 
-        mrfstAdj[2])
+comp5 <- c("random forest8", confusionMatrix(prfAdj, validation$classe)$overall[1], mrfstAdj[2])
 
-mrfstAdj2 <- system.time (mrfAdj2 <- train(classe ~ roll_belt + 
-                pitch_forearm + yaw_belt + magnet_dumbbell_z +
-                pitch_belt , 
+mrfstAdj2 <- system.time (mrfAdj2 <- train(classe ~ roll_belt + pitch_forearm + yaw_belt + magnet_dumbbell_z + pitch_belt, 
         data = training, method = "rf", trControl= tc))
 
 prfAdj2 <- predict(mrfAdj2, validation)
 
-comp6 <- c("random forest5", 
-        confusionMatrix(prfAdj2, validation$classe)$overall[1],
-        mrfstAdj2[2])
+comp6 <- c("random forest5", confusionMatrix(prfAdj2, validation$classe)$overall[1],mrfstAdj2[2])
 
 comp <- data.frame(matrix(ncol = 3, nrow = 0))
 comp <- rbind(comp, comp1, comp2, comp3, comp4, comp5, comp6)
@@ -227,6 +207,8 @@ kable(comp) %>%
         kable_styling(bootstrap_options = c("striped", "hover"), 
                 full_width = F)
 
+stopCluster(cluster)
+registerDoSEQ()
 ```
 
 ## Appendix 3. Environment data
